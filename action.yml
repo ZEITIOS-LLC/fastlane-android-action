@@ -1,0 +1,69 @@
+name: 'Fastlane Android'
+description: 'Execute fastlane pipeline for Android'
+inputs:
+  version-code:
+    description: |
+      Version code
+    required: true
+    default: '1'
+  version-name:
+    description: |
+      Version Name
+    required: true
+    default: '1.0'
+  package-name:
+    description: 'Android app package name (e.g. com.example.application)'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1.2'
+        bundler-cache: true
+    - name: Install dependencies
+      shell: bash
+      run: |
+        bundle install
+        yarn
+    - id: create-google-json-file
+      if: ${{ inputs.google-json-key-base64 != '' }}
+      shell: bash
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: |
+        echo "${{ inputs.google-json-key-base64 }}" | base64 -d > "${TMPDIR}/__google_credentials.json"
+        echo "google-credentials-file=${TMPDIR}/__google_credentials.json" >> $GITHUB_OUTPUT
+    - id: create-keystore-file
+      if: ${{ inputs.key-store-base64 != '' }}
+      shell: bash
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: |
+        echo "${{ inputs.key-store-base64 }}" | base64 -d > "${TMPDIR}/__keystore.jks"
+        echo "keystore-file=${TMPDIR}/__keystore.jks" >> $GITHUB_OUTPUT
+    - id: run-fastlane
+      shell: bash
+      run: bundle exec fastlane android publish
+      env:
+        APP_BUILD_NUMBER: ${{ inputs.version-code }}
+        APP_BUILD_NAME: ${{ inputs.version-name }}
+        ANDROID_PACKAGE_NAME: ${{ inputs.package-name }}
+        GOOGLE_JSON_FILE: ${{ steps.create-google-json-file.outputs.google-credentials-file }}
+        ANDROID_STORE_FILE: ${{ steps.create-keystore-file.outputs.keystore-file }}
+        ANDROID_STORE_PASSWORD: ${{ inputs.key-store-password }}
+        ANDROID_KEY_ALIAS: ${{ inputs.key-alias }}
+        ANDROID_KEY_PASSWORD: ${{ inputs.key-password }}
+    - id: upload-artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifacts
+        path: artifacts/
