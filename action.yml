@@ -49,6 +49,7 @@ runs:
       shell: bash
       run: |
         flutter pub get    
+        flutter build appbundle
 
     - id: create-google-json-file
       if: ${{ inputs.google-json-key-base64 != '' }}
