@@ -39,7 +39,7 @@ runs:
         fi
       shell: bash
     - name: Install React Native dependencies
-      if: steps.flutter-check.outputs.is_flutter == 'false'
+      if: steps.flutter-check.outputs.is_flutter != 'true'
       shell: bash
       run: |
         yarn
